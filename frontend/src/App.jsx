@@ -5,41 +5,34 @@ const API_URL = 'https://smart-guard-hpze.onrender.com/api/polygon/analyze';
 
 const PRESETS = {
   simple: [
-    { x: 150, y: 90 },
-    { x: 520, y: 90 },
-    { x: 610, y: 240 },
-    { x: 480, y: 380 },
-    { x: 180, y: 380 }
+    { x: 150, y: 90 }, { x: 520, y: 90 }, { x: 610, y: 240 }, { x: 480, y: 380 }, { x: 180, y: 380 }
   ],
   lShape: [
-    { x: 120, y: 80 },
-    { x: 360, y: 80 },
-    { x: 360, y: 240 },
-    { x: 580, y: 240 },
-    { x: 580, y: 390 },
-    { x: 120, y: 390 }
+    { x: 120, y: 80 }, { x: 360, y: 80 }, { x: 360, y: 240 }, { x: 580, y: 240 }, { x: 580, y: 390 }, { x: 120, y: 390 }
   ],
   complex: [
-    { x: 90, y: 90 },
-    { x: 300, y: 70 },
-    { x: 340, y: 190 },
-    { x: 470, y: 80 },
-    { x: 650, y: 120 },
-    { x: 620, y: 390 },
-    { x: 430, y: 300 },
-    { x: 320, y: 400 },
-    { x: 190, y: 290 },
-    { x: 90, y: 380 }
+    { x: 90, y: 90 }, { x: 300, y: 70 }, { x: 340, y: 190 }, { x: 470, y: 80 }, { x: 650, y: 120 },
+    { x: 620, y: 390 }, { x: 430, y: 300 }, { x: 320, y: 400 }, { x: 190, y: 290 }, { x: 90, y: 380 }
   ],
   convex: [
-    { x: 260, y: 70 },
-    { x: 460, y: 70 },
-    { x: 600, y: 170 },
-    { x: 600, y: 310 },
-    { x: 460, y: 400 },
-    { x: 260, y: 400 },
-    { x: 130, y: 310 },
-    { x: 130, y: 170 }
+    { x: 260, y: 70 }, { x: 460, y: 70 }, { x: 600, y: 170 }, { x: 600, y: 310 }, { x: 460, y: 400 },
+    { x: 260, y: 400 }, { x: 130, y: 310 }, { x: 130, y: 170 }
+  ],
+  // NEW COMPLEX EXAMPLES:
+  maze: [
+    { x: 50, y: 50 }, { x: 730, y: 50 }, { x: 730, y: 120 }, { x: 120, y: 120 },
+    { x: 120, y: 190 }, { x: 730, y: 190 }, { x: 730, y: 260 }, { x: 120, y: 260 },
+    { x: 120, y: 330 }, { x: 730, y: 330 }, { x: 730, y: 400 }, { x: 50, y: 400 }
+  ],
+  comb: [
+    { x: 50, y: 350 }, { x: 100, y: 100 }, { x: 150, y: 350 }, { x: 250, y: 100 },
+    { x: 300, y: 350 }, { x: 400, y: 100 }, { x: 450, y: 350 }, { x: 550, y: 100 },
+    { x: 600, y: 350 }, { x: 700, y: 100 }, { x: 750, y: 350 }, { x: 750, y: 420 }, { x: 50, y: 420 }
+  ],
+  star: [
+    { x: 390, y: 50 }, { x: 450, y: 180 }, { x: 600, y: 180 }, { x: 480, y: 270 },
+    { x: 530, y: 400 }, { x: 390, y: 320 }, { x: 250, y: 400 }, { x: 300, y: 270 },
+    { x: 180, y: 180 }, { x: 330, y: 180 }
   ]
 };
 
@@ -293,6 +286,10 @@ export default function App() {
             <button onClick={() => loadPreset('lShape')}>[L-Shape]</button>
             <button onClick={() => loadPreset('complex')}>[Complex]</button>
             <button onClick={() => loadPreset('convex')}>[Convex]</button>
+            {/* NEW BUTTONS */}
+            <button onClick={() => loadPreset('maze')}>[Maze]</button>
+            <button onClick={() => loadPreset('comb')}>[Worst-Case Comb]</button>
+            <button onClick={() => loadPreset('star')}>[Star]</button>
           </div>
 
           {/* Drawing Canvas */}
