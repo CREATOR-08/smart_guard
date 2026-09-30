@@ -38,6 +38,15 @@ public class ArtGalleryService {
             response.setStatusMessage("Invalid polygon: Vertices are collinear.");
             return response;
         }
+        // ... existing collinear check ...
+        if (Math.abs(signedArea) < EPSILON) {
+            response.setValid(false);
+            response.setStatusMessage("Invalid polygon: Vertices are collinear.");
+            return response;
+        }
+
+        // ADD THIS LINE HERE: Classify sweep-line vertices
+        response.setVertexTypes(classifyVertices(vertices));
 
         // 2. Ear Clipping Triangulation
         List<int[]> diagonals = new ArrayList<>();
@@ -423,5 +432,37 @@ public class ArtGalleryService {
                 q.getX() >= Math.min(p.getX(), r.getX()) - EPSILON &&
                 q.getY() <= Math.max(p.getY(), r.getY()) + EPSILON &&
                 q.getY() >= Math.min(p.getY(), r.getY()) - EPSILON;
+    }
+
+
+
+
+    private Map<Integer, String> classifyVertices(List<Point> pts) {
+        Map<Integer, String> types = new HashMap<>();
+        int n = pts.size();
+        double signedArea = computeSignedArea(pts);
+        
+        for (int i = 0; i < n; i++) {
+            Point prev = pts.get((i - 1 + n) % n);
+            Point curr = pts.get(i);
+            Point next = pts.get((i + 1) % n);
+
+            // On HTML Canvas, higher Y value means it is visually "below"
+            boolean prevBelow = prev.getY() > curr.getY();
+            boolean nextBelow = next.getY() > curr.getY();
+            
+            // Check if the vertex is convex based on the polygon's winding order
+            double cp = crossProduct(prev, curr, next);
+            boolean isConvex = (signedArea > 0) ? (cp <= 0) : (cp >= 0);
+
+            if (prevBelow && nextBelow) {
+                types.put(i, isConvex ? "START" : "SPLIT");
+            } else if (!prevBelow && !nextBelow) {
+                types.put(i, isConvex ? "END" : "MERGE");
+            } else {
+                types.put(i, "REGULAR");
+            }
+        }
+        return types;
     }
 }

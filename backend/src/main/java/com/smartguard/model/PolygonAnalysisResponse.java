@@ -136,4 +136,16 @@ public class PolygonAnalysisResponse {
     public void setCameraCoveredTriangles(Map<Integer, List<Integer>> cameraCoveredTriangles) {
         this.cameraCoveredTriangles = cameraCoveredTriangles;
     }
+
+
+    private Map<Integer, String> vertexTypes;
+
+    // Add these getters and setters at the bottom
+    public Map<Integer, String> getVertexTypes() {
+        return vertexTypes;
+    }
+
+    public void setVertexTypes(Map<Integer, String> vertexTypes) {
+        this.vertexTypes = vertexTypes;
+    }
 }

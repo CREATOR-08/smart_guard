@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const API_URL = 'https://smart-guard-hpze.onrender.com/api/polygon/analyze';
+const API_URL = 'http://localhost:8080/api/polygon/analyze';
 
 const PRESETS = {
   simple: [
@@ -152,20 +152,46 @@ export default function App() {
       ? (cameraMode === 'GREEDY' ? analysis.greedySetCoverCameras : analysis.artGalleryCameras)
       : [];
 
+    const showSweepLineShapes = analysis?.valid && (step === 'FINISHED' || step === 'TRIANGULATE');
+
     vertices.forEach((v, idx) => {
       const isCamera = activeCameras.includes(idx);
+      const vType = analysis?.vertexTypes ? analysis.vertexTypes[idx] : 'REGULAR';
+      
       ctx.beginPath();
-      ctx.arc(v.x, v.y, isCamera ? 12 : 7, 0, Math.PI * 2);
 
-      if (step === 'COLOR' || step === 'CAMERAS') {
-        const colorIdx = analysis?.vertexColors?.[idx] ?? 0;
-        ctx.fillStyle = COLOR_HEX[colorIdx];
+      // Draw specialized geometric shapes during the sweep-line/triangulation phases
+      if (showSweepLineShapes && !isCamera) {
+        if (vType === 'START') {
+          ctx.moveTo(v.x, v.y - 9); ctx.lineTo(v.x - 8, v.y + 7); ctx.lineTo(v.x + 8, v.y + 7);
+          ctx.fillStyle = '#3b82f6'; // Blue Triangle Up
+        } else if (vType === 'END') {
+          ctx.moveTo(v.x, v.y + 9); ctx.lineTo(v.x - 8, v.y - 7); ctx.lineTo(v.x + 8, v.y - 7);
+          ctx.fillStyle = '#22c55e'; // Green Triangle Down
+        } else if (vType === 'SPLIT') {
+          ctx.moveTo(v.x, v.y - 10); ctx.lineTo(v.x - 8, v.y); ctx.lineTo(v.x, v.y + 10); ctx.lineTo(v.x + 8, v.y);
+          ctx.fillStyle = '#ef4444'; // Red Diamond
+        } else if (vType === 'MERGE') {
+          ctx.rect(v.x - 7, v.y - 7, 14, 14);
+          ctx.fillStyle = '#f97316'; // Orange Square
+        } else {
+          ctx.arc(v.x, v.y, 7, 0, Math.PI * 2);
+          ctx.fillStyle = '#f8fafc'; // White Circle (Regular)
+        }
       } else {
-        ctx.fillStyle = '#f8fafc';
+        // Draw standard circles once triangulation is done (or for cameras)
+        ctx.arc(v.x, v.y, isCamera ? 12 : 7, 0, Math.PI * 2);
+        if (step === 'COLOR' || step === 'CAMERAS') {
+          ctx.fillStyle = COLOR_HEX[analysis?.vertexColors?.[idx] ?? 0];
+        } else {
+          ctx.fillStyle = '#f8fafc';
+        }
       }
+
       ctx.fill();
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1.5;
       ctx.strokeStyle = '#0f172a';
+      ctx.closePath();
       ctx.stroke();
 
       if (isCamera) {
@@ -178,10 +204,9 @@ export default function App() {
         ctx.fillText('📷', v.x - 10, v.y - 16);
       }
 
-      // ONLY RENDER P1, P2, etc. (Coordinates removed from canvas)
       ctx.font = 'bold 12px Inter, sans-serif';
       ctx.fillStyle = '#e2e8f0';
-      ctx.fillText(`P${idx + 1}`, v.x + 10, v.y + 4);
+      ctx.fillText(`P${idx + 1}`, v.x + 12, v.y + 6);
     });
   }, [vertices, isClosed, mousePos, step, analysis, visibleTrianglesCount, cameraMode]);
 
@@ -308,8 +333,20 @@ export default function App() {
                 ) : (
                   vertices.map((v, i) => (
                     <div key={i} className="vertex-row">
-                      <span>P{i + 1}</span>
-                      <span>({v.x}, {v.y})</span>
+                      <span>P{i + 1} ({v.x}, {v.y})</span>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        color: '#f8fafc', 
+                        background: analysis?.vertexTypes?.[i] === 'START' ? '#3b82f6' :
+                                   analysis?.vertexTypes?.[i] === 'END' ? '#22c55e' :
+                                   analysis?.vertexTypes?.[i] === 'SPLIT' ? '#ef4444' :
+                                   analysis?.vertexTypes?.[i] === 'MERGE' ? '#f97316' : '#475569',
+                        padding: '2px 6px', 
+                        borderRadius: '4px',
+                        fontWeight: 'bold'
+                      }}>
+                        {analysis?.vertexTypes ? analysis.vertexTypes[i] : 'REGULAR'}
+                      </span>
                     </div>
                   ))
                 )}
@@ -404,6 +441,28 @@ export default function App() {
           <button className="center-btn" style={{ marginTop: '20px' }} disabled={!isClosed} onClick={() => setStep('FINISHED')}>
             Reset Pipeline
           </button>
+
+          {/* Sweep-Line Legend (Only visible before coloring) */}
+          {(step === 'DRAW' || step === 'FINISHED' || step === 'TRIANGULATE') && analysis?.valid && (
+            <div className="card" style={{ marginTop: '20px' }}>
+              <h3 style={{ fontSize: '0.75rem' }}>Sweep-Line Legend</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
+                <span style={{ color: '#3b82f6' }}>▲</span> Start Vertex
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
+                <span style={{ color: '#22c55e' }}>▼</span> End Vertex
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
+                <span style={{ color: '#ef4444', fontSize: '1.2rem' }}>♦</span> Split Vertex
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
+                <span style={{ color: '#f97316' }}>■</span> Merge Vertex
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
+                <span style={{ color: '#f8fafc' }}>●</span> Regular Vertex
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
