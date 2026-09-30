@@ -12,7 +12,7 @@ body {
 }
 
 .app-container {
-  max-width: 1220px;
+  max-width: 1400px;
   margin: 0 auto;
   border: 1px solid #334155;
   border-radius: 12px;
@@ -37,45 +37,56 @@ body {
   letter-spacing: 0.3px;
 }
 
-.main-grid {
+.main-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 200px 1fr 200px;
   gap: 20px;
   padding: 20px;
 }
 
-.left-panel {
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  font-weight: 600;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 8px;
+}
+
+.center-content {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.preset-bar, .action-bar, .pipeline-bar {
+.canvas-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 10px;
-  align-items: center;
-}
-
-.section-label {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #94a3b8;
-  margin-right: 6px;
-  font-weight: 600;
 }
 
 button {
   background-color: #334155;
   color: #f8fafc;
   border: 1px solid #475569;
-  padding: 8px 14px;
+  padding: 10px 14px;
   border-radius: 6px;
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  text-align: left;
+}
+
+button.center-btn {
+  text-align: center;
 }
 
 button:hover:not(:disabled) {
@@ -113,6 +124,8 @@ button.danger {
   border-radius: 8px;
   background-color: #090d16;
   overflow: hidden;
+  display: flex;
+  justify-content: center;
 }
 
 canvas {
@@ -130,20 +143,14 @@ canvas {
   font-size: 0.92rem;
 }
 
-.status-valid {
-  color: #4ade80;
-  font-weight: 600;
-}
+.status-valid { color: #4ade80; font-weight: 600; }
+.status-invalid { color: #f87171; font-weight: 600; }
 
-.status-invalid {
-  color: #f87171;
-  font-weight: 600;
-}
-
-.right-panel {
-  display: flex;
-  flex-direction: column;
+.bottom-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
+  margin-top: 10px;
 }
 
 .card {
@@ -191,11 +198,12 @@ canvas {
 .mode-toggle {
   display: flex;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .mode-toggle button {
   flex: 1;
   font-size: 0.8rem;
   padding: 6px 8px;
+  text-align: center;
 }
