@@ -3,24 +3,29 @@ import React, { useState, useRef, useEffect } from 'react';
 const API_URL = 'https://smart-guard-hpze.onrender.com/api/polygon/analyze';
 
 const PRESETS = {
-  simple: [
-    { x: 150, y: 90 }, { x: 520, y: 90 }, { x: 610, y: 240 }, { x: 480, y: 380 }, { x: 180, y: 380 }
-  ],
-  lShape: [
-    { x: 120, y: 80 }, { x: 360, y: 80 }, { x: 360, y: 240 }, { x: 580, y: 240 }, { x: 580, y: 390 }, { x: 120, y: 390 }
-  ],
   complex: [
     { x: 90, y: 90 }, { x: 300, y: 70 }, { x: 340, y: 190 }, { x: 470, y: 80 }, { x: 650, y: 120 },
     { x: 620, y: 390 }, { x: 430, y: 300 }, { x: 320, y: 400 }, { x: 190, y: 290 }, { x: 90, y: 380 }
-  ],
-  convex: [
-    { x: 260, y: 70 }, { x: 460, y: 70 }, { x: 600, y: 170 }, { x: 600, y: 310 }, { x: 460, y: 400 },
-    { x: 260, y: 400 }, { x: 130, y: 310 }, { x: 130, y: 170 }
   ],
   maze: [
     { x: 50, y: 50 }, { x: 730, y: 50 }, { x: 730, y: 120 }, { x: 120, y: 120 },
     { x: 120, y: 190 }, { x: 730, y: 190 }, { x: 730, y: 260 }, { x: 120, y: 260 },
     { x: 120, y: 330 }, { x: 730, y: 330 }, { x: 730, y: 400 }, { x: 50, y: 400 }
+  ],
+  verticalMaze: [
+    { x: 70, y: 55 }, { x: 710, y: 55 }, { x: 710, y: 405 }, { x: 640, y: 405 },
+    { x: 640, y: 125 }, { x: 570, y: 125 }, { x: 570, y: 405 }, { x: 500, y: 405 },
+    { x: 500, y: 125 }, { x: 430, y: 125 }, { x: 430, y: 405 }, { x: 360, y: 405 },
+    { x: 360, y: 125 }, { x: 290, y: 125 }, { x: 290, y: 405 }, { x: 220, y: 405 },
+    { x: 220, y: 125 }, { x: 150, y: 125 }, { x: 150, y: 405 }, { x: 70, y: 405 }
+  ],
+  labyrinth: [
+    { x: 190, y: 30 }, { x: 590, y: 30 }, { x: 590, y: 430 }, { x: 550, y: 430 },
+    { x: 550, y: 90 }, { x: 510, y: 90 }, { x: 510, y: 380 }, { x: 470, y: 380 },
+    { x: 470, y: 130 }, { x: 430, y: 130 }, { x: 430, y: 340 }, { x: 390, y: 340 },
+    { x: 390, y: 90 }, { x: 350, y: 90 }, { x: 350, y: 390 }, { x: 310, y: 390 },
+    { x: 310, y: 150 }, { x: 270, y: 150 }, { x: 270, y: 430 }, { x: 230, y: 430 },
+    { x: 230, y: 110 }, { x: 190, y: 110 }
   ],
   comb: [
     { x: 50, y: 350 }, { x: 100, y: 100 }, { x: 150, y: 350 }, { x: 250, y: 100 },
@@ -34,8 +39,25 @@ const PRESETS = {
   ]
 };
 
-const COLOR_HEX = ['#ef4444', '#22c55e', '#3b82f6'];
-const COLOR_NAMES = ['Color 1 (Red)', 'Color 2 (Green)', 'Color 3 (Blue)'];
+const PRESET_LABELS = {
+  complex: 'Angular Polygon',
+  maze: 'Horizontal Maze',
+  verticalMaze: 'Vertical Maze',
+  labyrinth: 'Square Labyrinth',
+  comb: 'Worst-Case Comb',
+  star: 'Star Polygon'
+};
+const COLOR_HEX = ['#fb7185', '#34d399', '#818cf8'];
+const COLOR_TINTS = ['rgba(251, 113, 133, 0.12)', 'rgba(52, 211, 153, 0.12)', 'rgba(129, 140, 248, 0.14)'];
+const TRIANGLE_TINTS = ['rgba(34, 211, 238, 0.12)', 'rgba(45, 212, 191, 0.12)', 'rgba(129, 140, 248, 0.13)'];
+const COLOR_NAMES = ['Color 1 (Coral)', 'Color 2 (Mint)', 'Color 3 (Violet)'];
+const VERTEX_TYPE_COLORS = {
+  START: '#38bdf8',
+  END: '#34d399',
+  SPLIT: '#fb7185',
+  MERGE: '#fbbf24',
+  REGULAR: '#cbd5e1'
+};
 
 export default function App() {
   const canvasRef = useRef(null);
@@ -47,6 +69,40 @@ export default function App() {
   const [visibleTrianglesCount, setVisibleTrianglesCount] = useState(0);
   const [cameraMode, setCameraMode] = useState('GREEDY');
   const [errorMsg, setErrorMsg] = useState(null);
+  const [activePreset, setActivePreset] = useState(null);
+  const [sweepLineY, setSweepLineY] = useState(null);
+  const [sweepCompleted, setSweepCompleted] = useState(false);
+  const [sweepRun, setSweepRun] = useState(0);
+
+  useEffect(() => {
+    if (step !== 'SWEEP_LINE' || !analysis?.valid || vertices.length === 0) return undefined;
+
+    const minY = Math.min(...vertices.map(({ y }) => y));
+    const maxY = Math.max(...vertices.map(({ y }) => y));
+    const duration = 5000;
+    const startY = minY - 20;
+    const endY = maxY + 20;
+    let animationFrame;
+    let startedAt;
+
+    setSweepCompleted(false);
+    setSweepLineY(startY);
+
+    const animateSweep = (timestamp) => {
+      if (startedAt === undefined) startedAt = timestamp;
+      const progress = Math.min((timestamp - startedAt) / duration, 1);
+      setSweepLineY(startY + (endY - startY) * progress);
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animateSweep);
+      } else {
+        setSweepCompleted(true);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animateSweep);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [step, analysis, vertices, sweepRun]);
 
   useEffect(() => {
     if (step === 'TRIANGULATE' && analysis?.triangles) {
@@ -57,7 +113,7 @@ export default function App() {
         current += 1;
         setVisibleTrianglesCount(current);
         if (current >= total) clearInterval(timer);
-      }, 350);
+      }, 700);
       return () => clearInterval(timer);
     } else if (analysis?.triangles) {
       setVisibleTrianglesCount(analysis.triangles.length);
@@ -108,16 +164,18 @@ export default function App() {
         ctx.lineTo(p3.x, p3.y);
         ctx.closePath();
 
-        if (step === 'TRIANGULATE' && i === count - 1) {
-          ctx.fillStyle = 'rgba(250, 204, 21, 0.28)';
-        } else {
-          ctx.fillStyle = 'rgba(148, 163, 184, 0.08)';
-        }
+        const isCurrentTriangle = step === 'TRIANGULATE' && i === count - 1;
+        const colorIndex = analysis?.vertexColors?.[t.v1] ?? i % TRIANGLE_TINTS.length;
+        ctx.fillStyle = isCurrentTriangle
+          ? 'rgba(250, 204, 21, 0.3)'
+          : step === 'COLOR'
+            ? COLOR_TINTS[colorIndex]
+            : TRIANGLE_TINTS[i % TRIANGLE_TINTS.length];
         ctx.fill();
 
-        ctx.strokeStyle = '#f59e0b';
+        ctx.strokeStyle = isCurrentTriangle ? '#fbbf24' : '#2dd4bf';
         ctx.setLineDash([6, 4]);
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = isCurrentTriangle ? 2 : 1.25;
         ctx.stroke();
         ctx.setLineDash([]);
       }
@@ -130,7 +188,7 @@ export default function App() {
     });
     if (isClosed) {
       ctx.closePath();
-      ctx.strokeStyle = analysis?.valid === false ? '#ef4444' : '#38bdf8';
+      ctx.strokeStyle = analysis?.valid === false ? '#fb7185' : '#5eead4';
     } else {
       ctx.strokeStyle = '#94a3b8';
     }
@@ -148,35 +206,62 @@ export default function App() {
       ctx.setLineDash([]);
     }
 
+    if (step === 'SWEEP_LINE' && analysis?.valid && sweepLineY !== null) {
+      ctx.save();
+      ctx.beginPath();
+      vertices.forEach((v, idx) => {
+        if (idx === 0) ctx.moveTo(v.x, v.y);
+        else ctx.lineTo(v.x, v.y);
+      });
+      ctx.closePath();
+      ctx.clip();
+      ctx.beginPath();
+      ctx.moveTo(0, sweepLineY);
+      ctx.lineTo(canvas.width, sweepLineY);
+      ctx.strokeStyle = 'rgba(45, 212, 191, 0.28)';
+      ctx.lineWidth = 12;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, sweepLineY);
+      ctx.lineTo(canvas.width, sweepLineY);
+      ctx.strokeStyle = '#5eead4';
+      ctx.lineWidth = 2;
+      ctx.shadowColor = '#2dd4bf';
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.restore();
+    }
+
     const activeCameras = step === 'CAMERAS' && analysis?.valid
       ? (cameraMode === 'GREEDY' ? analysis.greedySetCoverCameras : analysis.artGalleryCameras)
       : [];
 
-    const showSweepLineShapes = analysis?.valid && (step === 'FINISHED' || step === 'TRIANGULATE');
-
     vertices.forEach((v, idx) => {
       const isCamera = activeCameras.includes(idx);
       const vType = analysis?.vertexTypes ? analysis.vertexTypes[idx] : 'REGULAR';
+      const isClassified = analysis?.valid && (
+        (step === 'SWEEP_LINE' && sweepLineY !== null && sweepLineY >= v.y) ||
+        (sweepCompleted && (step === 'FINISHED' || step === 'TRIANGULATE'))
+      );
       
       ctx.beginPath();
 
-      // Draw specialized geometric shapes during the sweep-line/triangulation phases
-      if (showSweepLineShapes && !isCamera) {
+      if (isClassified && !isCamera) {
         if (vType === 'START') {
           ctx.moveTo(v.x, v.y - 9); ctx.lineTo(v.x - 8, v.y + 7); ctx.lineTo(v.x + 8, v.y + 7);
-          ctx.fillStyle = '#3b82f6'; // Blue Triangle Up
+          ctx.fillStyle = VERTEX_TYPE_COLORS.START;
         } else if (vType === 'END') {
           ctx.moveTo(v.x, v.y + 9); ctx.lineTo(v.x - 8, v.y - 7); ctx.lineTo(v.x + 8, v.y - 7);
-          ctx.fillStyle = '#22c55e'; // Green Triangle Down
+          ctx.fillStyle = VERTEX_TYPE_COLORS.END;
         } else if (vType === 'SPLIT') {
           ctx.moveTo(v.x, v.y - 10); ctx.lineTo(v.x - 8, v.y); ctx.lineTo(v.x, v.y + 10); ctx.lineTo(v.x + 8, v.y);
-          ctx.fillStyle = '#ef4444'; // Red Diamond
+          ctx.fillStyle = VERTEX_TYPE_COLORS.SPLIT;
         } else if (vType === 'MERGE') {
           ctx.rect(v.x - 7, v.y - 7, 14, 14);
-          ctx.fillStyle = '#f97316'; // Orange Square
+          ctx.fillStyle = VERTEX_TYPE_COLORS.MERGE;
         } else {
           ctx.arc(v.x, v.y, 7, 0, Math.PI * 2);
-          ctx.fillStyle = '#f8fafc'; // White Circle (Regular)
+          ctx.fillStyle = VERTEX_TYPE_COLORS.REGULAR;
         }
       } else {
         // Draw standard circles once triangulation is done (or for cameras)
@@ -208,26 +293,31 @@ export default function App() {
       ctx.fillStyle = '#e2e8f0';
       ctx.fillText(`P${idx + 1}`, v.x + 12, v.y + 6);
     });
-  }, [vertices, isClosed, mousePos, step, analysis, visibleTrianglesCount, cameraMode]);
+  }, [vertices, isClosed, mousePos, step, analysis, visibleTrianglesCount, cameraMode, sweepLineY, sweepCompleted]);
 
   const handleCanvasClick = (e) => {
     if (isClosed) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = Math.round(e.clientX - rect.left);
-    const y = Math.round(e.clientY - rect.top);
+    const x = Math.round((e.clientX - rect.left) * (canvasRef.current.width / rect.width));
+    const y = Math.round((e.clientY - rect.top) * (canvasRef.current.height / rect.height));
     setVertices((prev) => [...prev, { x, y }]);
   };
 
   const handleMouseMove = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     setMousePos({
-      x: Math.round(e.clientX - rect.left),
-      y: Math.round(e.clientY - rect.top)
+      x: Math.round((e.clientX - rect.left) * (canvasRef.current.width / rect.width)),
+      y: Math.round((e.clientY - rect.top) * (canvasRef.current.height / rect.height))
     });
   };
 
   const runBackendAnalysis = async (pts) => {
     setErrorMsg(null);
+    setAnalysis(null);
+    setIsClosed(false);
+    setStep('FINISHED');
+    setSweepLineY(null);
+    setSweepCompleted(false);
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -250,17 +340,41 @@ export default function App() {
 
   const loadPreset = (key) => {
     const pts = PRESETS[key];
+    setActivePreset(key);
     setVertices(pts);
     runBackendAnalysis(pts);
   };
 
   const handleClear = () => {
+    setActivePreset(null);
     setVertices([]);
     setIsClosed(false);
     setAnalysis(null);
     setStep('DRAW');
+    setSweepLineY(null);
+    setSweepCompleted(false);
     setErrorMsg(null);
   };
+
+  const handleSweepLine = () => {
+    setSweepCompleted(false);
+    setSweepLineY(null);
+    setStep('SWEEP_LINE');
+    setSweepRun((currentRun) => currentRun + 1);
+  };
+
+  const handleResetPipeline = () => {
+    setStep('FINISHED');
+    setSweepLineY(null);
+    setSweepCompleted(false);
+  };
+
+  const classifiedVertexCount = analysis?.valid
+    ? vertices.filter((vertex) => (
+      sweepCompleted ||
+      (step === 'SWEEP_LINE' && sweepLineY !== null && sweepLineY >= vertex.y)
+    )).length
+    : 0;
 
   return (
     <div className="app-container">
@@ -274,14 +388,24 @@ export default function App() {
       <div className="main-layout">
         {/* LEFT SIDEBAR: Examples */}
         <div className="sidebar">
-          <h3 className="section-title">Example Problems</h3>
-          <button onClick={() => loadPreset('simple')}>Simple Polygon</button>
-          <button onClick={() => loadPreset('lShape')}>L-Shape</button>
-          <button onClick={() => loadPreset('complex')}>Complex</button>
-          <button onClick={() => loadPreset('convex')}>Convex</button>
-          <button onClick={() => loadPreset('maze')}>Maze</button>
-          <button onClick={() => loadPreset('comb')}>Worst-Case Comb</button>
-          <button onClick={() => loadPreset('star')}>Star</button>
+          <h3 className="section-title">Shape Library</h3>
+          <p className="sidebar-hint">Load a shape to explore its triangulation.</p>
+          {Object.entries(PRESETS).map(([key, points]) => (
+            <button
+              key={key}
+              className={`preset-button ${activePreset === key ? 'selected' : ''}`}
+              onClick={() => loadPreset(key)}
+              aria-pressed={activePreset === key}
+            >
+              <svg className="preset-icon" viewBox="0 0 32 32" aria-hidden="true">
+                <path d="M5 4v24h22V4H5Zm0 6h16v5H11v7h16M5 22h6" />
+              </svg>
+              <span className="preset-copy">
+                <span>{PRESET_LABELS[key]}</span>
+                <small>{points.length} corners</small>
+              </span>
+            </button>
+          ))}
         </div>
 
         {/* CENTER: Canvas and Status */}
@@ -334,19 +458,25 @@ export default function App() {
                   vertices.map((v, i) => (
                     <div key={i} className="vertex-row">
                       <span>P{i + 1} ({v.x}, {v.y})</span>
-                      <span style={{ 
+                      {analysis?.valid && (
+                        <span style={{
                         fontSize: '0.75rem', 
-                        color: '#f8fafc', 
-                        background: analysis?.vertexTypes?.[i] === 'START' ? '#3b82f6' :
-                                   analysis?.vertexTypes?.[i] === 'END' ? '#22c55e' :
-                                   analysis?.vertexTypes?.[i] === 'SPLIT' ? '#ef4444' :
-                                   analysis?.vertexTypes?.[i] === 'MERGE' ? '#f97316' : '#475569',
+                        color: '#08111d',
+                        background: (
+                          sweepCompleted ||
+                          (step === 'SWEEP_LINE' && sweepLineY !== null && sweepLineY >= v.y)
+                        ) ? VERTEX_TYPE_COLORS[analysis.vertexTypes?.[i] ?? 'REGULAR'] : '#475569',
                         padding: '2px 6px', 
                         borderRadius: '4px',
-                        fontWeight: 'bold'
+                        fontWeight: 'bold',
+                        whiteSpace: 'nowrap'
                       }}>
-                        {analysis?.vertexTypes ? analysis.vertexTypes[i] : 'REGULAR'}
-                      </span>
+                        {(
+                          sweepCompleted ||
+                          (step === 'SWEEP_LINE' && sweepLineY !== null && sweepLineY >= v.y)
+                        ) ? analysis.vertexTypes?.[i] ?? 'REGULAR' : 'PENDING'}
+                        </span>
+                      )}
                     </div>
                   ))
                 )}
@@ -429,37 +559,44 @@ export default function App() {
         {/* RIGHT SIDEBAR: Pipeline */}
         <div className="sidebar">
           <h3 className="section-title">Algorithm Pipeline</h3>
+          <button className={`center-btn ${step === 'SWEEP_LINE' ? 'active-step' : ''}`} disabled={!analysis?.valid} onClick={handleSweepLine}>
+            {sweepCompleted ? '1. Replay Sweep Line' : '1. Sweep Line &amp; Classify'}
+          </button>
           <button className={`center-btn ${step === 'TRIANGULATE' ? 'active-step' : ''}`} disabled={!analysis?.valid} onClick={() => setStep('TRIANGULATE')}>
-            1. Triangulate
+            2. Triangulate
           </button>
           <button className={`center-btn ${step === 'COLOR' ? 'active-step' : ''}`} disabled={!analysis?.valid || (step !== 'TRIANGULATE' && step !== 'COLOR' && step !== 'CAMERAS')} onClick={() => setStep('COLOR')}>
-            2. 3-Color Graph
+            3. 3-Color Graph
           </button>
           <button className={`center-btn ${step === 'CAMERAS' ? 'active-step' : ''}`} disabled={!analysis?.valid || (step !== 'COLOR' && step !== 'CAMERAS')} onClick={() => setStep('CAMERAS')}>
-            3. Place Cameras
+            4. Place Cameras
           </button>
-          <button className="center-btn" style={{ marginTop: '20px' }} disabled={!isClosed} onClick={() => setStep('FINISHED')}>
+          <button className="center-btn" style={{ marginTop: '20px' }} disabled={!isClosed} onClick={handleResetPipeline}>
             Reset Pipeline
           </button>
 
-          {/* Sweep-Line Legend (Only visible before coloring) */}
-          {(step === 'DRAW' || step === 'FINISHED' || step === 'TRIANGULATE') && analysis?.valid && (
+          {step === 'SWEEP_LINE' && analysis?.valid && (
             <div className="card" style={{ marginTop: '20px' }}>
-              <h3 style={{ fontSize: '0.75rem' }}>Sweep-Line Legend</h3>
+              <h3 style={{ fontSize: '0.75rem' }}>Vertex Classification</h3>
+              <p className="sweep-progress">
+                {sweepCompleted
+                  ? `Classification complete · ${classifiedVertexCount} vertices`
+                  : `Sweeping top to bottom · ${classifiedVertexCount}/${vertices.length} classified`}
+              </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
-                <span style={{ color: '#3b82f6' }}>▲</span> Start Vertex
+                <span style={{ color: VERTEX_TYPE_COLORS.START }}>▲</span> Start Vertex
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
-                <span style={{ color: '#22c55e' }}>▼</span> End Vertex
+                <span style={{ color: VERTEX_TYPE_COLORS.END }}>▼</span> End Vertex
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
-                <span style={{ color: '#ef4444', fontSize: '1.2rem' }}>♦</span> Split Vertex
+                <span style={{ color: VERTEX_TYPE_COLORS.SPLIT, fontSize: '1.2rem' }}>♦</span> Split Vertex
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
-                <span style={{ color: '#f97316' }}>■</span> Merge Vertex
+                <span style={{ color: VERTEX_TYPE_COLORS.MERGE }}>■</span> Merge Vertex
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', margin: '4px 0' }}>
-                <span style={{ color: '#f8fafc' }}>●</span> Regular Vertex
+                <span style={{ color: VERTEX_TYPE_COLORS.REGULAR }}>●</span> Regular Vertex
               </div>
             </div>
           )}
