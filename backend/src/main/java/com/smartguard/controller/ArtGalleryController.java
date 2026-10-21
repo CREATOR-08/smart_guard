@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/polygon/analyze")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "${app.cors.allowed-origin:*}")
 public class ArtGalleryController {
 
     private final ArtGalleryService artGalleryService;
@@ -24,7 +24,7 @@ public class ArtGalleryController {
         return "API working";
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public PolygonAnalysisResponse analyzePolygon(@RequestBody List<Point> vertices) {
         return artGalleryService.analyzePolygon(vertices);
     }

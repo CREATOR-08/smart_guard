@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-// const API_URL = 'https://smart-guard-hpze.onrender.com/api/polygon/analyze';
-const API_URL='https://smart-guard-azure.vercel.app/api/polygon/analyze';
+// const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
+const API_URL = `https://smart-guard-azure.vercel.app/api/polygon/analyze`;
 
 const PRESETS = {
   complex: [
@@ -74,6 +74,7 @@ export default function App() {
   const [sweepLineY, setSweepLineY] = useState(null);
   const [sweepCompleted, setSweepCompleted] = useState(false);
   const [sweepRun, setSweepRun] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     if (step !== 'SWEEP_LINE' || !analysis?.valid || vertices.length === 0) return undefined;
@@ -297,7 +298,7 @@ export default function App() {
   }, [vertices, isClosed, mousePos, step, analysis, visibleTrianglesCount, cameraMode, sweepLineY, sweepCompleted]);
 
   const handleCanvasClick = (e) => {
-    if (isClosed) return;
+    if (isClosed || isAnalyzing) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = Math.round((e.clientX - rect.left) * (canvasRef.current.width / rect.width));
     const y = Math.round((e.clientY - rect.top) * (canvasRef.current.height / rect.height));
@@ -316,6 +317,7 @@ export default function App() {
     setErrorMsg(null);
     setAnalysis(null);
     setIsClosed(false);
+    setIsAnalyzing(true);
     setStep('FINISHED');
     setSweepLineY(null);
     setSweepCompleted(false);
@@ -325,12 +327,28 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pts)
       });
-      const data = await response.json();
+      const responseText = await response.text();
+      let data;
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        throw new Error(response.ok
+          ? 'The analysis API returned an invalid JSON response.'
+          : `Analysis request failed (${response.status}): ${responseText || response.statusText}`);
+      }
+      if (!response.ok) {
+        throw new Error(data?.statusMessage || data?.message || data?.detail || `Analysis request failed (${response.status}).`);
+      }
+      if (!data || typeof data.valid !== 'boolean' || typeof data.statusMessage !== 'string') {
+        throw new Error('The analysis API returned an unexpected response.');
+      }
       setAnalysis(data);
       setIsClosed(true);
       setStep('FINISHED');
     } catch (err) {
-      setErrorMsg('Cannot reach backend. Ensure your API_URL is correct.');
+      setErrorMsg(err instanceof Error ? err.message : 'Analysis request failed.');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -396,6 +414,7 @@ export default function App() {
               key={key}
               className={`preset-button ${activePreset === key ? 'selected' : ''}`}
               onClick={() => loadPreset(key)}
+              disabled={isAnalyzing}
               aria-pressed={activePreset === key}
             >
               <svg className="preset-icon" viewBox="0 0 32 32" aria-hidden="true">
@@ -412,10 +431,10 @@ export default function App() {
         {/* CENTER: Canvas and Status */}
         <div className="center-content">
           <div className="canvas-actions">
-            <button className="primary center-btn" onClick={handleFinishPolygon} disabled={isClosed || vertices.length < 3}>
-              Finish Polygon
+            <button className="primary center-btn" onClick={handleFinishPolygon} disabled={isClosed || isAnalyzing || vertices.length < 3}>
+              {isAnalyzing ? 'Analyzing…' : 'Finish Polygon'}
             </button>
-            <button className="danger center-btn" onClick={handleClear}>
+            <button className="danger center-btn" onClick={handleClear} disabled={isAnalyzing}>
               Clear Canvas
             </button>
           </div>
@@ -437,6 +456,8 @@ export default function App() {
               <strong>Status:</strong>{' '}
               {errorMsg ? (
                 <span className="status-invalid">{errorMsg}</span>
+              ) : isAnalyzing ? (
+                <span>Analyzing polygon…</span>
               ) : !isClosed ? (
                 <span>Drawing mode — click to add vertices</span>
               ) : analysis?.valid ? (
