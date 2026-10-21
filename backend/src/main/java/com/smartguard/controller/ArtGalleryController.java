@@ -3,6 +3,7 @@ package com.smartguard.controller;
 import com.smartguard.model.Point;
 import com.smartguard.model.PolygonAnalysisResponse;
 import com.smartguard.service.ArtGalleryService;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,12 @@ public class ArtGalleryController {
         this.artGalleryService = artGalleryService;
     }
 
-    @PostMapping("/analyze")
+    @GetMapping(produces = MediaType.TEXT_PLAIN_VALUE)
+    public String checkApi() {
+        return "API working";
+    }
+
+    @PostMapping
     public PolygonAnalysisResponse analyzePolygon(@RequestBody List<Point> vertices) {
         return artGalleryService.analyzePolygon(vertices);
     }
