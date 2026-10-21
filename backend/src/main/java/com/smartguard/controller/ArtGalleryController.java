@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/polygon")
+@RequestMapping("/api/polygon/analyze")
 @CrossOrigin(origins = "*")
 public class ArtGalleryController {
 
