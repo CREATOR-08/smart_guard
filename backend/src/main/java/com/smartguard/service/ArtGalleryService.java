@@ -49,7 +49,7 @@ public class ArtGalleryService {
         response.setVertexTypes(GeometryUtils.classifyVertices(vertices));
 
         List<int[]> diagonals = new ArrayList<>();
-        List<Triangle> triangles = PolygonTriangulator.earClippingTriangulate(vertices, signedArea, diagonals);
+        List<Triangle> triangles = PolygonTriangulator.monotoneTriangulate(vertices, diagonals);
 
         if (triangles.size() != n - 2) {
             response.setValid(false);
