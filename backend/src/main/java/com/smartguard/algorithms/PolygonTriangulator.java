@@ -13,10 +13,4 @@ public final class PolygonTriangulator {
     public static List<Triangle> monotoneTriangulate(List<Point> points, List<int[]> diagonals) {
         return MonotoneTriangulator.triangulate(points, diagonals);
     }
-
-    @Deprecated
-    public static List<Triangle> earClippingTriangulate(
-            List<Point> points, double signedArea, List<int[]> diagonals) {
-        return monotoneTriangulate(points, diagonals);
-    }
 }

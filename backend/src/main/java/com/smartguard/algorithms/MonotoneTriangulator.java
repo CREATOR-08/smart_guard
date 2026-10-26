@@ -21,7 +21,7 @@ public final class MonotoneTriangulator {
         Set<Long> addedDiagonals = new HashSet<>();
 
         for (List<Integer> piece : pieces) {
-            if (!isYMonotone(piece, points)) {
+            if (!MonotonePartitioner.isYMonotone(piece, points)) {
                 removeAddedDiagonals(diagonals, originalDiagonalCount);
                 return earClip(points, diagonals);
             }
@@ -265,43 +265,6 @@ public final class MonotoneTriangulator {
         }
         return GeometryUtils.isSegmentInsidePolygon(
                 points.get(a), points.get(b), piecePoints);
-    }
-
-    private static boolean isYMonotone(List<Integer> piece, List<Point> points) {
-        if (piece.size() < 3) {
-            return false;
-        }
-
-        int topPosition = 0;
-        int bottomPosition = 0;
-        for (int i = 1; i < piece.size(); i++) {
-            if (compareVertices(points.get(piece.get(i)), points.get(piece.get(topPosition)),
-                    piece.get(i), piece.get(topPosition)) < 0) {
-                topPosition = i;
-            }
-            if (compareVertices(points.get(piece.get(i)), points.get(piece.get(bottomPosition)),
-                    piece.get(i), piece.get(bottomPosition)) > 0) {
-                bottomPosition = i;
-            }
-        }
-
-        return chainIsMonotone(piece, points, topPosition, bottomPosition, 1)
-                && chainIsMonotone(piece, points, topPosition, bottomPosition, -1);
-    }
-
-    private static boolean chainIsMonotone(List<Integer> piece, List<Point> points,
-                                           int start, int end, int direction) {
-        int position = start;
-        double previousY = points.get(piece.get(position)).getY();
-        while (position != end) {
-            position = (position + direction + piece.size()) % piece.size();
-            double currentY = points.get(piece.get(position)).getY();
-            if (currentY > previousY + GeometryUtils.EPSILON) {
-                return false;
-            }
-            previousY = currentY;
-        }
-        return true;
     }
 
     private static int compareVertices(Point a, Point b, int indexA, int indexB) {

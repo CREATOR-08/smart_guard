@@ -27,6 +27,14 @@ public final class VertexClassifier {
             );
         }
 
+        for (Point point : points) {
+            if (point == null || !Double.isFinite(point.getX()) || !Double.isFinite(point.getY())) {
+                throw new IllegalArgumentException(
+                        "Polygon vertices must have finite coordinates."
+                );
+            }
+        }
+
         int n = points.size();
         double signedArea = GeometryUtils.computeSignedArea(points);
 
@@ -39,56 +47,37 @@ public final class VertexClassifier {
         VertexType[] types = new VertexType[n];
 
         for (int i = 0; i < n; i++) {
-
-            Point prev = points.get((i - 1 + n) % n);
+            int previous = (i - 1 + n) % n;
+            int next = (i + 1) % n;
+            Point prev = points.get(previous);
             Point curr = points.get(i);
-            Point next = points.get((i + 1) % n);
-
-            double cross = GeometryUtils.crossProduct(prev, curr, next);
-            if (Math.abs(cross) <= GeometryUtils.EPSILON) {
+            Point following = points.get(next);
+            double turn = GeometryUtils.crossProduct(prev, curr, following);
+            if (Math.abs(turn) <= GeometryUtils.EPSILON) {
                 types[i] = VertexType.REGULAR;
                 continue;
             }
 
-            boolean convex = cross * signedArea > 0;
-            boolean abovePrev = compareSweepOrder(points, i, (i - 1 + n) % n) < 0;
-            boolean aboveNext = compareSweepOrder(points, i, (i + 1) % n) < 0;
-            boolean belowPrev = compareSweepOrder(points, (i - 1 + n) % n, i) < 0;
-            boolean belowNext = compareSweepOrder(points, (i + 1) % n, i) < 0;
+            boolean convex = signedArea > 0
+                    ? turn > GeometryUtils.EPSILON
+                    : turn < -GeometryUtils.EPSILON;
+            boolean isTop = compareSweepOrder(curr, prev) < 0
+                    && compareSweepOrder(curr, following) < 0;
+            boolean isBottom = compareSweepOrder(prev, curr) < 0
+                    && compareSweepOrder(following, curr) < 0;
 
-            if (abovePrev && aboveNext) {
-
-                types[i] = convex
-                        ? VertexType.START
-                        : VertexType.SPLIT;
-
-            } else if (belowPrev && belowNext) {
-
-                types[i] = convex
-                        ? VertexType.END
-                        : VertexType.MERGE;
-
-            } else {
-
-                types[i] = VertexType.REGULAR;
-            }
+            types[i] = isTop
+                    ? (convex ? VertexType.START : VertexType.SPLIT)
+                    : isBottom
+                    ? (convex ? VertexType.END : VertexType.MERGE)
+                    : VertexType.REGULAR;
         }
 
         return types;
     }
 
-    private static int compareSweepOrder(List<Point> points, int indexA, int indexB) {
-        Point a = points.get(indexA);
-        Point b = points.get(indexB);
-        int yOrder = Double.compare(b.getY(), a.getY());
-        if (yOrder != 0) {
-            return yOrder;
-        }
-
-        int xOrder = Double.compare(a.getX(), b.getX());
-        if (xOrder != 0) {
-            return xOrder;
-        }
-        return Integer.compare(indexA, indexB);
+    private static int compareSweepOrder(Point a, Point b) {
+        int yOrder = Double.compare(a.getY(), b.getY());
+        return yOrder != 0 ? yOrder : Double.compare(a.getX(), b.getX());
     }
 }

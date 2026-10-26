@@ -86,7 +86,7 @@ public final class MonotonePartitioner {
         return true;
     }
 
-    private static boolean isYMonotone(List<Integer> piece, List<Point> points) {
+    static boolean isYMonotone(List<Integer> piece, List<Point> points) {
         double topY = Double.NEGATIVE_INFINITY;
         double bottomY = Double.POSITIVE_INFINITY;
         for (int vertex : piece) {
