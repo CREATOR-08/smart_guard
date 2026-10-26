@@ -44,19 +44,17 @@ public final class VertexClassifier {
             Point curr = points.get(i);
             Point next = points.get((i + 1) % n);
 
-            // Normalize the turn direction for either polygon orientation.
             double cross = GeometryUtils.crossProduct(prev, curr, next);
+            if (Math.abs(cross) <= GeometryUtils.EPSILON) {
+                types[i] = VertexType.REGULAR;
+                continue;
+            }
 
-            boolean convex = signedArea > 0
-                    ? cross > GeometryUtils.EPSILON
-                    : cross < -GeometryUtils.EPSILON;
-
-            // The sweep processes higher vertices before lower vertices.
-            boolean abovePrev = isAbove(curr, prev);
-            boolean aboveNext = isAbove(curr, next);
-
-            boolean belowPrev = isAbove(prev, curr);
-            boolean belowNext = isAbove(next, curr);
+            boolean convex = cross * signedArea > 0;
+            boolean abovePrev = compareSweepOrder(points, i, (i - 1 + n) % n) < 0;
+            boolean aboveNext = compareSweepOrder(points, i, (i + 1) % n) < 0;
+            boolean belowPrev = compareSweepOrder(points, (i - 1 + n) % n, i) < 0;
+            boolean belowNext = compareSweepOrder(points, (i + 1) % n, i) < 0;
 
             if (abovePrev && aboveNext) {
 
@@ -79,22 +77,18 @@ public final class VertexClassifier {
         return types;
     }
 
-    /**
-     * Determines sweep-line order.
-     * Higher y comes first; for equal y, smaller x comes first.
-     */
-    private static boolean isAbove(Point a, Point b) {
-
-        if (a.getY() > b.getY() + GeometryUtils.EPSILON) {
-            return true;
+    private static int compareSweepOrder(List<Point> points, int indexA, int indexB) {
+        Point a = points.get(indexA);
+        Point b = points.get(indexB);
+        int yOrder = Double.compare(b.getY(), a.getY());
+        if (yOrder != 0) {
+            return yOrder;
         }
 
-        if (Math.abs(a.getY() - b.getY())
-                <= GeometryUtils.EPSILON) {
-
-            return a.getX() < b.getX() - GeometryUtils.EPSILON;
+        int xOrder = Double.compare(a.getX(), b.getX());
+        if (xOrder != 0) {
+            return xOrder;
         }
-
-        return false;
+        return Integer.compare(indexA, indexB);
     }
 }

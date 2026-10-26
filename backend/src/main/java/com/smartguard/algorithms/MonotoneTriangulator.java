@@ -305,12 +305,11 @@ public final class MonotoneTriangulator {
     }
 
     private static int compareVertices(Point a, Point b, int indexA, int indexB) {
-        if (Math.abs(a.getY() - b.getY()) > GeometryUtils.EPSILON) {
-            return Double.compare(b.getY(), a.getY());
+        int yOrder = Double.compare(b.getY(), a.getY());
+        if (yOrder != 0) {
+            return yOrder;
         }
-        if (Math.abs(a.getX() - b.getX()) > GeometryUtils.EPSILON) {
-            return Double.compare(a.getX(), b.getX());
-        }
-        return Integer.compare(indexA, indexB);
+        int xOrder = Double.compare(a.getX(), b.getX());
+        return xOrder != 0 ? xOrder : Integer.compare(indexA, indexB);
     }
 }
