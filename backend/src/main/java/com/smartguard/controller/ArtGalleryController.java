@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/polygon/analyze")
+@RequestMapping("/polygon/analyze")
 public class ArtGalleryController {
 
     private final ArtGalleryService artGalleryService;
