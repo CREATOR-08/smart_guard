@@ -10,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/polygon/analyze")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class ArtGalleryController {
 
     private final ArtGalleryService artGalleryService;

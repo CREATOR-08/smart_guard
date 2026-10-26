@@ -26,7 +26,7 @@ project/
 
 1. Open a terminal in the `backend` directory.
 2. Check `pom.xml` to confirm the required Java version and framework.
-3. The API listens on port `8080` by default. Set `PORT` to change the port and `CORS_ALLOWED_ORIGIN` to the frontend's origin when deploying separately.
+3. The API listens on port `8080` by default. Set `PORT` to change the port. CORS is enabled for all origins, methods, and headers.
 4. Do not put passwords, API keys, or production credentials in this repository.
 
 The polygon analysis endpoint is `POST /api/polygon/analyze`. It accepts a JSON array of points, each with numeric `x` and `y` values, and returns the polygon analysis as JSON.
@@ -70,4 +70,3 @@ If the project uses a different start script, check the `scripts` section of `fr
 - **Database connection errors:** Check that the database is running and the connection settings are correct.
 - **Missing environment variables:** Create the required local environment configuration using the variable names expected by the application. Do not share secret values.
 - **Frontend cannot reach backend:** Verify the backend URL, port, and any required CORS configuration.
-
