@@ -1,9 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
-const API_URL = API_BASE_URL.endsWith('/polygon/analyze')
-  ? API_BASE_URL
-  : `${API_BASE_URL}/polygon/analyze`;
+
+const API_URL = 'https://smart-guard-hpze.onrender.com/api/polygon/analyze';
 
 const PRESETS = {
   complex: [
