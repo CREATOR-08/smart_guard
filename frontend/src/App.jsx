@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const API_URL = 'https://smart-guard-hpze.onrender.com/api/polygon/analyze';
+const API_URL = 'https://smartguard-backend-ten.vercel.app/api/polygon/analyze';
 
 const PRESETS = {
   complex: [
